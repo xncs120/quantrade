@@ -1,0 +1,10 @@
+services:
+  nautilus:
+    image: ghcr.io/nautechsystems/jupyterlab:nightly
+    container_name: nautilus_trader
+    platform: linux/amd64
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebooks:/opt/pysetup/tutorials/notebooks
+    restart: unless-stopped

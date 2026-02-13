@@ -1,0 +1,36 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © xsheng120
+
+//@version=6
+indicator(title = "heima", shorttitle = "heima", overlay = false)
+
+// ========== heikin ashi ==========
+var float ha_open = na
+ha_close = (open + high + low + close) / 4
+ha_open  := na(ha_open[1]) ? (open + close) / 2 : (ha_open[1] + ha_close[1]) / 2
+ha_high  = math.max(high, math.max(ha_open, ha_close))
+ha_low   = math.min(low, math.min(ha_open, ha_close))
+plotcandle(ha_open, ha_high, ha_low, ha_close, title = "Heikin Ashi", color = ha_close >= ha_open ? #089981 : #f23645, wickcolor = ha_close >= ha_open ? #089981 : #f23645)
+doji = math.abs(ha_close - ha_open) <= (ha_high - ha_low) * 0.1
+plotshape(doji, title = "Doji Arrow", style = shape.xcross, location = location.abovebar, color = color.yellow, size = size.tiny, text = "")
+
+// ========== hma ==========
+hma_GROUP = "HMA Settings"
+hma_show = input(true, title = "", inline = "hma", group = hma_GROUP, display = display.none)
+hma_length = input.int(defval = 30, title = "HMA Length", inline = "hma", group = hma_GROUP, display = display.none)
+hma_src = input(title = "Source", defval = close, group = hma_GROUP, display = display.none)
+
+wma_n2_value = 2 * ta.wma(hma_src, math.round(hma_length/2))
+wma_value = ta.wma(hma_src, hma_length)
+wma_diff = wma_n2_value - wma_value
+wma_sqn = math.round(math.sqrt(hma_length))
+
+wma2_n2_value = 2 * ta.wma(hma_src[1], math.round(hma_length/2))
+wma2_value = ta.wma(hma_src[1], hma_length)
+wma2_diff = wma_n2_value - wma2_value
+wma2_sqn = math.round(math.sqrt(hma_length))
+
+hma_value = ta.wma(wma_diff, wma_sqn)
+hma_neg_value = ta.wma(wma2_diff, wma2_sqn)
+
+plot(hma_value, color = hma_value > hma_neg_value ? #f23645 : #089981)

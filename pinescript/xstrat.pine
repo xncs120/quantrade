@@ -1,0 +1,238 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © xsheng120
+
+//@version=6
+indicator(title = "xtrat", shorttitle = "xtrat", overlay=true)
+
+// ========== sma ==========
+sma_GROUP = "SMA Settings"
+sma1_show = input(false, title = "", inline = "sma1", group = sma_GROUP)
+sma1_length = input.int(defval = 20, title = "SMA1 Length", inline = "sma1", group = sma_GROUP)
+sma2_show = input(false, title = "", inline = "sma2", group = sma_GROUP)
+sma2_length = input.int(defval = 50, title = "SMA2 Length", inline = "sma2", group = sma_GROUP)
+sma3_show = input(true, title = "", inline = "sma3", group = sma_GROUP)
+sma3_length = input.int(defval = 200, title = "SMA3 Length", inline = "sma3", group = sma_GROUP)
+sma_src = input(title = "Source", defval = hlc3, group = sma_GROUP)
+
+sma1_value = ta.sma(sma_src, sma1_length)
+sma2_value = ta.sma(sma_src, sma2_length)
+sma3_value = ta.sma(sma_src, sma3_length)
+
+plot(sma1_value, title = "SMA1", color = color.blue, style = plot.style_circles, display = sma1_show ? display.all : display.none, editable = sma1_show)
+plot(sma2_value, title = "SMA2", color = color.orange, style = plot.style_circles, display = sma2_show ? display.all : display.none, editable = sma2_show)
+plot(sma3_value, title = "SMA3", color = color.purple, style = plot.style_circles, display = sma3_show ? display.all : display.none, editable = sma3_show)
+
+// ========== ema ==========
+ema_GROUP = "EMA Settings"
+ema1_show = input(false, title = "", inline = "ema1", group = ema_GROUP)
+ema1_length = input.int(defval = 9, title = "EMA1 Length", inline = "ema1", group = ema_GROUP)
+ema2_show = input(false, title = "", inline = "ema2", group = ema_GROUP)
+ema2_length = input.int(defval = 20, title = "EMA2 Length", inline = "ema2", group = ema_GROUP)
+ema3_show = input(true, title = "", inline = "ema3", group = ema_GROUP)
+ema3_length = input.int(defval = 200, title = "EMA3 Length", inline = "ema3", group = ema_GROUP)
+ema_src = input(title = "Source", defval = hlc3, group = ema_GROUP)
+
+ema1_value = ta.ema(ema_src, ema1_length)
+ema2_value = ta.ema(ema_src, ema2_length)
+ema3_value = ta.ema(ema_src, ema3_length)
+
+plot(ema1_value, title = "EMA1", color = color.blue, display = ema1_show ? display.all : display.none, editable = ema1_show)
+plot(ema2_value, title = "EMA2", color = color.orange, display = ema2_show ? display.all : display.none, editable = ema2_show)
+plot(ema3_value, title = "EMA3", color = color.purple, display = ema3_show ? display.all : display.none, editable = ema3_show)
+
+// ========== hma ==========
+hma_GROUP = "HMA Settings"
+hma_show = input(false, title = "", inline = "hma", group = hma_GROUP)
+hma_length = input.int(defval = 30, title = "HMA Length", inline = "hma", group = hma_GROUP)
+hma_src = input(title = "Source", defval = close, group = hma_GROUP)
+
+wma_n2_value = 2 * ta.wma(hma_src, math.round(hma_length/2))
+wma_value = ta.wma(hma_src, hma_length)
+wma_diff = wma_n2_value - wma_value
+wma_sqn = math.round(math.sqrt(hma_length))
+
+wma2_n2_value = 2 * ta.wma(hma_src[1], math.round(hma_length/2))
+wma2_value = ta.wma(hma_src[1], hma_length)
+wma2_diff = wma_n2_value - wma2_value
+wma2_sqn = math.round(math.sqrt(hma_length))
+
+hma_value = ta.wma(wma_diff, wma_sqn)
+hma_neg_value = ta.wma(wma2_diff, wma2_sqn)
+
+plot(hma_value, color = hma_value > hma_neg_value ? color.rgb(242, 54, 70) : color.rgb(8, 153, 129), display = hma_show ? display.all : display.none, editable = hma_show)
+
+// ========== vwap ==========
+vwap_GROUP = "VWAP Settings"
+vwap_show = input(true, title = "Show VWAP", group = vwap_GROUP)
+vwap_tf_hide = input(true, title = "Hide VWAP on 30min or above", group = vwap_GROUP)
+vwap_anchor = input.string(defval = "Session", title = "Anchor Period", options = ["Session", "Week", "Month", "Quarter", "Year", "Decade", "Century", "Earnings", "Dividends", "Splits"], group = vwap_GROUP)
+vwap_src = input(title = "Source", defval = hlc3, group = vwap_GROUP)
+vwap_offset = input.int(0, title = "Offset", group = vwap_GROUP, minval = 0)
+
+cum_volume = ta.cum(volume)
+if barstate.islast and cum_volume == 0
+    runtime.error("No volume is provided by the data vendor.")
+
+isNewPeriod = switch vwap_anchor
+	"Earnings"  => not na(request.earnings(syminfo.tickerid, earnings.actual, barmerge.gaps_on, barmerge.lookahead_on, ignore_invalid_symbol=true))
+	"Dividends" => not na(request.dividends(syminfo.tickerid, dividends.gross, barmerge.gaps_on, barmerge.lookahead_on, ignore_invalid_symbol=true))
+	"Splits"    => not na(request.splits(syminfo.tickerid, splits.denominator, barmerge.gaps_on, barmerge.lookahead_on, ignore_invalid_symbol=true))
+	"Session"   => timeframe.change("D")
+	"Week"      => timeframe.change("W")
+	"Month"     => timeframe.change("M")
+	"Quarter"   => timeframe.change("3M")
+	"Year"      => timeframe.change("12M")
+	"Decade"    => timeframe.change("12M") and year % 10 == 0
+	"Century"   => timeframe.change("12M") and year % 100 == 0
+	=> false
+isEsdAnchor = vwap_anchor == "Earnings" or vwap_anchor == "Dividends" or vwap_anchor == "Splits"
+if na(vwap_src[1]) and not isEsdAnchor
+	isNewPeriod := true
+
+float vwap_value = na
+
+if not (vwap_tf_hide and not (timeframe.in_seconds() < (30 * 60)))
+    [_vwap, _stdevUpper, _] = ta.vwap(vwap_src, isNewPeriod, 1)
+	vwap_value := _vwap
+
+plot(vwap_value, title = "VWAP", color = color.white, offset = vwap_offset, display = vwap_show ? display.all : display.none, editable = vwap_show)
+
+// ========== consolidation ==========
+cons_GROUP = "Consolidation Settings"
+cons_show = input.bool(false, title = "Show Consolidation Range", group = cons_GROUP)
+cons_alert = input.bool(false, title = "Alert When Consolidation Range Formed", group = cons_GROUP)
+cons_length = input.int(defval = 6, title = "Min Consolidation Length", minval = 2, group = cons_GROUP)
+cons_tightness = input.float(defval = 3, title = "Tightness Threshold (ATR)", step = 0.1, group = cons_GROUP)
+
+cons_atr = ta.atr(14)
+cons_upper_bound = ta.highest(high, cons_length)
+cons_lower_bound = ta.lowest(low, cons_length)
+cons_range  = cons_upper_bound - cons_lower_bound
+
+is_consolidating = cons_range <= (cons_atr * cons_tightness)
+
+var int cons_count = 0
+var float cons_high = na
+var float cons_low = na
+var box cons_box = na
+
+if is_consolidating
+    cons_count += 1
+else
+    cons_count := 0
+
+if cons_count >= cons_length and cons_show
+    if cons_count == cons_length
+        cons_high := cons_upper_bound
+        cons_low  := cons_lower_bound
+        cons_box := box.new(bar_index - cons_length + 1, cons_high, bar_index, cons_low, bgcolor = color.new(color.olive, 90), border_color = color.olive, border_style = line.style_dashed)
+
+        if cons_alert
+            alert("Consolidation Range Formed!")
+    else
+        box.set_right(cons_box, bar_index)
+        box.set_top(cons_box, cons_upper_bound)
+        box.set_bottom(cons_box, cons_lower_bound)
+
+// ========== pivot high/low ==========
+phl_GROUP = "Pivot High/Low Settings"
+phl_show = input(false, title = "Show Pivot High/Low", group = phl_GROUP)
+phl_left_length  = input.int(5, "Pivot Left Length", group = phl_GROUP)
+phl_right_length = input.int(5, "Pivot Right Length", group = phl_GROUP)
+
+phl_high = ta.pivothigh(high, phl_left_length, phl_right_length)
+phl_low  = ta.pivotlow(low, phl_left_length, phl_right_length)
+
+var float phl_last_high = na
+var float phl_prev_high = na
+var float phl_last_low  = na
+var float phl_prev_low  = na
+
+if not na(phl_high)
+    phl_prev_high := phl_last_high
+    phl_last_high := phl_high
+
+if not na(phl_low)
+    phl_prev_low := phl_last_low
+    phl_last_low := phl_low
+
+isLH = not na(phl_high) and phl_high < phl_prev_high
+isHL = not na(phl_low)  and phl_low  > phl_prev_low
+
+plotshape(isLH, "LH", shape.labeldown, location.abovebar, color.rgb(255, 82, 82, 50), text="LH", textcolor = color.white, offset=-phl_right_length, display = phl_show ? display.all : display.none, editable = phl_show)
+plotshape(isHL, "HL", shape.labelup, location.belowbar, color.rgb(76, 175, 79, 50), text="HL", textcolor = color.white, offset=-phl_right_length, display = phl_show ? display.all : display.none, editable = phl_show)
+
+// ========== atr sl ==========
+atrsl_GROUP = "ATR SL Settings"
+atrsl_show = input(false, title = "Show ATR SL", group = atrsl_GROUP)
+atrsl_length = input.int(defval = 14, title = "ATR SL Length", minval = 1, group = atrsl_GROUP)
+atrsl_smoothing = input.string(defval = "RMA", title = "Smoothing", options = ["RMA", "SMA", "EMA", "WMA"], group = atrsl_GROUP)
+atrsl_multiplier = input.float(defval = 1.5, title = "Multiplier", minval = 1, group = atrsl_GROUP)
+
+atr_ma_function(source, length) =>
+	switch atrsl_smoothing
+		"RMA" => ta.rma(source, length)
+		"SMA" => ta.sma(source, length)
+		"EMA" => ta.ema(source, length)
+		=> ta.wma(source, length)
+
+atrsl_value = atr_ma_function(ta.tr(true), atrsl_length) * atrsl_multiplier
+plot(hlc3 - atrsl_value, title = "Long Position ATR SL", color = color.yellow, style = plot.style_circles, display = atrsl_show ? display.all : display.none, editable = atrsl_show)
+plot(hlc3 + atrsl_value, title = "Short Position ATR SL", color = color.yellow, style = plot.style_circles, display = atrsl_show ? display.all : display.none, editable = atrsl_show)
+
+// ========== session ==========
+session_GROUP = "Session settings"
+session_prevhl_show = input(false, title = "Show previous day H/L", group = session_GROUP)
+session_orbhl_show = input(false, title = "", inline = "orb", group = session_GROUP)
+session_orbhl_range = input.session("0930-0935", title = "Show x min(s) orb H/L", inline = "orb", group = session_GROUP)
+session_tf_hide = not (timeframe.in_seconds() < (30 * 60))
+
+[session_prev_high, session_prev_low] = request.security(syminfo.tickerid, "1D", [high[1], low[1]], lookahead = barmerge.lookahead_on)
+var line session_prev_high_line = line.new(na, na, na, na, color=color.blue, style=line.style_solid, extend=extend.both)
+var line session_prev_low_line = line.new(na, na, na, na, color=color.blue, style=line.style_solid, extend=extend.both)
+
+if session_prevhl_show and not session_tf_hide
+    line.set_y1(session_prev_high_line, session_prev_high)
+    line.set_y2(session_prev_high_line, session_prev_high)
+    line.set_y1(session_prev_low_line, session_prev_low)
+    line.set_y2(session_prev_low_line, session_prev_low)
+
+    line.set_x1(session_prev_high_line, bar_index - 1)
+    line.set_x2(session_prev_high_line, bar_index)
+    line.set_x1(session_prev_low_line, bar_index - 1)
+    line.set_x2(session_prev_low_line, bar_index)
+
+session_orbhl_time = time(timeframe.period, session_orbhl_range + ":1234567")
+session_is_today = not na(session_orbhl_time)
+session_is_first = session_is_today and not session_is_today[1]
+
+session_orb_high = float(na)
+session_orb_low = float(na)
+
+if session_is_first
+    session_orb_high := high
+    session_orb_low := low
+else
+    session_orb_high := session_orb_high[1]
+    session_orb_low := session_orb_low[1]
+
+if high > session_orb_high and session_is_today
+    session_orb_high := high
+if low < session_orb_low and session_is_today
+    session_orb_low := low
+
+plot(session_tf_hide ? na : session_orb_high, color = session_orb_high[1] != session_orb_high ? na : color.green, title = "Session High", display = session_orbhl_show ? display.all : display.none, editable = session_orbhl_show)
+plot(session_tf_hide ? na : session_orb_low, color = session_orb_low[1] != session_orb_low ? na : color.red, title = "Session Low", display = session_orbhl_show ? display.all : display.none, editable = session_orbhl_show)
+
+// ========== heikin ashi ==========
+// heikin_GROUP = "Heikin Ashi settings"
+// heikin_show = input(false, title = "Show Heikin Ashi with Doji indicator", group = heikin_GROUP)
+
+// var float ha_open = na
+// ha_close = (open + high + low + close) / 4
+// ha_open  := na(ha_open[1]) ? (open + close) / 2 : (ha_open[1] + ha_close[1]) / 2
+// ha_high  = math.max(high, math.max(ha_open, ha_close))
+// ha_low   = math.min(low, math.min(ha_open, ha_close))
+// plotcandle(ha_open, ha_high, ha_low, ha_close, title = "Heikin Ashi", color = ha_close >= ha_open ? color.rgb(8, 153, 129) : color.rgb(242, 54, 70), wickcolor = ha_close >= ha_open ? color.rgb(8, 153, 129) : color.rgb(242, 54, 70), display = heikin_show ? display.all : display.none, editable = heikin_show)
+// doji = math.abs(ha_close - ha_open) <= (ha_high - ha_low) * 0.1
+// plotshape(doji, title = "Doji Arrow", style = shape.xcross, location = location.abovebar, color = color.rgb(255, 235, 59), size = size.tiny, text = "", display = heikin_show ? display.all : display.none, editable = heikin_show)
