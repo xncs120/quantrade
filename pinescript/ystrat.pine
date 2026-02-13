@@ -33,9 +33,9 @@ lookbackRight = 5
 lookbackLeft = 5
 rangeUpper = 60
 rangeLower = 5
-bearColor = color.red
-bullColor = color.green
-textColor = color.white
+bearColor = color.new(color.red, 50)
+bullColor = color.new(color.green, 50)
+textColor = color.new(color.white, 50)
 noneColor = color.new(color.white, 100)
 
 _inRange(bool cond) =>
@@ -51,66 +51,27 @@ bearCond = false
 rsiLBR = rsi[lookbackRight]
 
 if calculateDivergence
-    // Regular Bullish
     // rsi: Higher Low
     plFound := not na(ta.pivotlow(rsi, lookbackLeft, lookbackRight))    
     rsiHL = rsiLBR > ta.valuewhen(plFound, rsiLBR, 1) and _inRange(plFound[1])
-    // Price: Lower Low
+    // price: Lower Low
     lowLBR = low[lookbackRight]
     priceLL = lowLBR < ta.valuewhen(plFound, lowLBR, 1)
     bullCond := priceLL and rsiHL and plFound
 
-    // Regular Bearish
     // rsi: Lower High
     phFound := not na(ta.pivothigh(rsi, lookbackLeft, lookbackRight))
     rsiLH = rsiLBR < ta.valuewhen(phFound, rsiLBR, 1) and _inRange(phFound[1])
-    // Price: Higher High
+    // price: Higher High
     highLBR = high[lookbackRight]
     priceHH = highLBR > ta.valuewhen(phFound, highLBR, 1)
     bearCond := priceHH and rsiLH and phFound
 
 
-plot(
-     plFound   ? rsiLBR : na,
-     offset    = -lookbackRight,
-     title     = "Regular Bullish",
-     linewidth = 2,
-     color     = (bullCond ? bullColor : noneColor),
-     display   = display.pane,
-     editable  = calculateDivergence)
-
-plotshape(
-     bullCond  ? rsiLBR : na,
-     offset    = -lookbackRight,
-     title     = "Regular Bullish Label",
-     text      = " Bull ",
-     style     = shape.labelup,
-     location  = location.absolute,
-     color     = bullColor,
-     textcolor = textColor,
-     display   = display.pane,
-     editable  = calculateDivergence)
-
-plot(
-     phFound   ? rsiLBR : na,
-     offset    = -lookbackRight,
-     title     = "Regular Bearish",
-     linewidth = 2,
-     color     = (bearCond ? bearColor : noneColor),
-     display   = display.pane,
-     editable  = calculateDivergence)
-
-plotshape(
-     bearCond  ? rsiLBR : na,
-     offset    = -lookbackRight,
-     title     = "Regular Bearish Label",
-     text      = " Bear ",
-     style     = shape.labeldown,
-     location  = location.absolute,
-     color     = bearColor,
-     textcolor = textColor,
-     display   = display.pane,
-     editable  = calculateDivergence)
+plot(plFound ? rsiLBR : na, offset = -lookbackRight, title = "Regular Bullish", linewidth = 2, color = (bullCond ? bullColor : noneColor), display = display.pane, editable = calculateDivergence)
+plotshape(bullCond ? rsiLBR : na, offset = -lookbackRight, title = "Regular Bullish Label", text = " Bull ", style = shape.labelup, location = location.absolute, color = bullColor, textcolor = textColor, display = display.pane, editable = calculateDivergence)
+plot(phFound ? rsiLBR : na, offset = -lookbackRight, title = "Regular Bearish", linewidth = 2, color = (bearCond ? bearColor : noneColor), display = display.pane, editable = calculateDivergence)
+plotshape(bearCond ? rsiLBR : na, offset = -lookbackRight, title = "Regular Bearish Label", text = " Bear ", style = shape.labeldown, location = location.absolute, color = bearColor, textcolor = textColor, display = display.pane, editable = calculateDivergence)
 
 // alertcondition(bullCond, title='Regular Bullish Divergence', message="Found a new Regular Bullish Divergence, `Pivot Lookback Right` number of bars to the left of the current bar.")
 // alertcondition(bearCond, title='Regular Bearish Divergence', message='Found a new Regular Bearish Divergence, `Pivot Lookback Right` number of bars to the left of the current bar.')
