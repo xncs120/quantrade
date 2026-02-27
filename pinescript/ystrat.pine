@@ -4,10 +4,15 @@
 //@version=6
 indicator(title="ystrat", shorttitle="ystrat", format=format.price, precision=2, timeframe="", timeframe_gaps=true)
 
-mfiLength = input.int(title="Length", defval=14, group="MFI Settings", minval=1, maxval=2000)
-mfiSrc = input.source(hlc3, "Source", group="MFI Settings")
-mf = ta.mfi(mfiSrc, mfiLength)
-plot(mf, "MF", color=color.gray)
+periodK = input.int(14, title="%K Length", minval=1, group="Stochastic Settings")
+smoothK = input.int(1, title="%K Smoothing", minval=1, group="Stochastic Settings")
+periodD = input.int(3, title="%D Smoothing", minval=1, group="Stochastic Settings")
+k = ta.sma(ta.stoch(close, high, low, periodK), smoothK)
+d = ta.sma(k, periodD)
+plot(k, title="%K", color=color.blue)
+plot(d, title="%D", color=color.orange)
+hline(80, "Max Upper Band", color=#787B86, linestyle=hline.style_dotted)
+hline(20, "Max Lower Band", color=#787B86, linestyle=hline.style_dotted)
 
 // ========================================================================================================================== //
 
@@ -20,14 +25,14 @@ up = ta.rma(math.max(change, 0), rsiLengthInput)
 down = ta.rma(-math.min(change, 0), rsiLengthInput)
 rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
 
-rsiPlot = plot(rsi, "RSI", color=#7E57C2)
-upperline = hline(80, "Upper Band", color=#787B86)
+rsiPlot = plot(rsi, "RSI", color=color.purple)
+upperline = hline(70, "Upper Band", color=color.new(#787B86, 50))
 midline = hline(50, "Middle Band", color=color.new(#787B86, 50))
-lowerline = hline(20, "Lower Band", color=#787B86)
+lowerline = hline(30, "Lower Band", color=color.new(#787B86, 50))
 fill(lowerline, upperline, color=color.rgb(126, 87, 194, 90), title="Background Fill")
 midLinePlot = plot(50, color = na, editable = false, display = display.none)
-fill(rsiPlot, midLinePlot, 100, 80, top_color = color.new(color.green, 0), bottom_color = color.new(color.green, 100),  title = "Overbought Gradient Fill")
-fill(rsiPlot, midLinePlot, 20,  0,  top_color = color.new(color.red, 100), bottom_color = color.new(color.red, 0),      title = "Oversold Gradient Fill")
+fill(rsiPlot, midLinePlot, 100, 70, top_color = color.new(color.green, 0), bottom_color = color.new(color.green, 100),  title = "Overbought Gradient Fill")
+fill(rsiPlot, midLinePlot, 30,  0,  top_color = color.new(color.red, 100), bottom_color = color.new(color.red, 0),      title = "Oversold Gradient Fill")
 
 lookbackRight = 5
 lookbackLeft = 5
